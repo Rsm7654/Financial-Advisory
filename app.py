@@ -48,4 +48,3 @@ if st.button("Predict"):
     prediction = model.predict(new_client_df)
     st.write(f"Predicted Client Satisfaction: {prediction[0]}")
 
-!streamlit run app.py
