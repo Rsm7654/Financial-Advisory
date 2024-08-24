@@ -1,7 +1,14 @@
-!pip install faker
-import numpy as np
+# prompt: create for front end in streamlit
+
+%%writefile app.py
+import streamlit as st
 import pandas as pd
+import numpy as np
 from faker import Faker
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 
 # Initialize Faker
 fake = Faker()
@@ -61,104 +68,64 @@ behavioral_data = {
     'Investment Activity': np.random.choice(['Active', 'Passive', 'None'], n_samples),
 }
 
-# Generate Advising Data
+# Generate Advising Data (excluding 'Client Satisfaction' for prediction)
 advising_data = {
     'Previous Advising History': [fake.text(max_nb_chars=100) for _ in range(n_samples)],
     'Adviser Notes': [fake.text(max_nb_chars=150) for _ in range(n_samples)],
-    'Client Satisfaction': np.random.choice(['Very Satisfied', 'Satisfied', 'Neutral', 'Dissatisfied', 'Very Dissatisfied'], n_samples),
 }
 
 # Combine all data into a single DataFrame
 synthetic_data = pd.DataFrame(data)
 synthetic_data = synthetic_data.assign(**financial_data, **goals_preferences, **behavioral_data, **advising_data)
 
-
-# prompt: building a model by using previous data
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
-
 # Assuming you want to predict 'Client Satisfaction' based on other features
-# Select features and target variable
-features = synthetic_data.drop('Client Satisfaction', axis=1)
-target = synthetic_data['Client Satisfaction']
+# Select features and target variable (not used in Streamlit app, but kept for reference)
+# features = synthetic_data.drop('Client Satisfaction', axis=1)
+# target = synthetic_data['Client Satisfaction']
 
-# Encode categorical features
+# Encode categorical features in the entire dataset
 label_encoders = {}
-for col in features.select_dtypes(include=['object']):
+for col in synthetic_data.select_dtypes(include=['object']):
   le = LabelEncoder()
-  features[col] = le.fit_transform(features[col])
+  synthetic_data[col] = le.fit_transform(synthetic_data[col])
   label_encoders[col] = le
 
-# Scale numerical features
+# Scale numerical features in the entire dataset
 scaler = StandardScaler()
-numerical_features = features.select_dtypes(include=['number'])
-features[numerical_features.columns] = scaler.fit_transform(numerical_features)
+numerical_features = synthetic_data.select_dtypes(include=['number'])
+synthetic_data[numerical_features.columns] = scaler.fit_transform(numerical_features)
 
-# Split data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
-
-# Initialize and train a Random Forest Classifier
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
-
-# Make predictions on the test set
-y_pred = model.predict(X_test)
-
-# Evaluate the model
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Model Accuracy: {accuracy}")
-
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-from faker import Faker
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
-
-# Initialize Faker
-fake = Faker()
-
-# Number of samples
-n_samples = 1000
-
-# ... (rest of the code for data generation remains the same)
-
-# Train the model (same as before)
-# ...
-
-# Streamlit app
+# --- Streamlit App ---
 st.title("Client Satisfaction Prediction")
 
-# Collect client data through Streamlit input widgets
+# Collect client data through user input
 client_data = {}
 for column in synthetic_data.columns:
-    if column != 'Client Satisfaction':
-        if column in ['Gender', 'Marital Status', 'Employment Status', 'Education Level', 'Residential Status',
-                       'Loan Type', 'Risk Tolerance', 'Spending Habits', 'Saving Habits', 'Investment Activity']:
-            # Dropdown for categorical features
-            unique_values = synthetic_data[column].unique()
-            client_data[column] = [st.selectbox(f"Select {column}", ['skip'] + list(unique_values))]
-        else:
-            # Text input for numerical features
-            client_data[column] = [st.text_input(f"Enter {column} (or type 'skip')", "")]
+  if column in ['Gender', 'Marital Status', 'Employment Status', 'Education Level', 'Residential Status',
+                 'Loan Type', 'Risk Tolerance', 'Spending Habits', 'Saving Habits', 'Investment Activity']:
+    # Provide dropdown options for categorical features
+    unique_values = synthetic_data[column].unique()
+    client_data[column] = [st.selectbox(f"Select {column}:", unique_values)]
+  else:
+    client_data[column] = [st.text_input(f"Enter {column}:")]
 
-# Create DataFrame and preprocess
+# Create a DataFrame from client data
 new_client_df = pd.DataFrame(client_data)
+
+# Preprocess new client data (encode and scale)
 for col in new_client_df.select_dtypes(include=['object']):
-    if col in label_encoders:
-        new_client_df[col] = label_encoders[col].transform(new_client_df[col])
+  if col in label_encoders:
+    new_client_df[col] = label_encoders[col].transform(new_client_df[col])
 
-numerical_features = new_client_df.select_dtypes(include=['number'])
-new_client_df[numerical_features.columns] = scaler.transform(numerical_features)
+numerical_features_new = new_client_df.select_dtypes(include=['number'])
+new_client_df[numerical_features_new.columns] = scaler.transform(numerical_features_new)
 
-# Make prediction and display
-if st.button("Predict"):
-    prediction = model.predict(new_client_df)
-    st.write(f"Predicted Client Satisfaction: {prediction[0]}")
-
+# --- Model Training and Prediction (Placeholder) ---
+# In a real application, you would load a pre-trained model here
+# and use it to make predictions on the new_client_df
+# For this example, we'll just display the preprocessed client data
+if st.button("Predict Satisfaction"):
+  st.write("## Preprocessed Client Data:")
+  st.write(new_client_df)
+  # ... (Load pre-trained model and make prediction)
+  # ... (Display prediction result)
