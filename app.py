@@ -1,3 +1,5 @@
+import faker
+print(faker.__version__)
 
 import streamlit as st
 import pandas as pd
